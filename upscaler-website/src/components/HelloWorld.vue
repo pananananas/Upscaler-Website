@@ -1,118 +1,143 @@
 <template>
-
-
-    <div id="imageContainer" ref="imageContainerRef">
-  <img id="myImage" src="https://assets.codepen.io/9051928/palm-tree.jpg" ref="myImage">
-		</div>
-  <!-- </div> -->
+  <div>
+    <select v-model="selectedAlgorithm">
+      <option value="nearestNeighbor">Nearest Neighbor</option>
+      <option value="bilinear">Bilinear Interpolation</option>
+    </select>
+    <div ref="dropArea" 
+         @click="selectFile" 
+         @drop="handleDrop" 
+         @dragover.prevent 
+         @dragenter.prevent 
+         class="drop-area">
+      Przeciągnij obraz tutaj lub kliknij, aby wybrać
+    </div>
+    <input type="file" ref="fileInput" @change="handleFileChange" style="display: none" />
+    <canvas v-if="newWidth && newHeight" ref="canvas" :width="newWidth" :height="newHeight"></canvas>
+  </div>
 </template>
 
 
-<script >
+<script>
+export default {
+  data() {
+    return {
+      selectedAlgorithm: "nearestNeighbor",
+      newWidth: null, 
+      newHeight: null,
+    };
+  },
+  methods: {
+    async handleDrop(event) {
+      event.preventDefault();
+      const file = event.dataTransfer.files[0];
+      this.processImage(file);
+    },
+    selectFile() {
+      this.$refs.fileInput.click();
+    },
+    handleFileChange(event) {
+      const file = event.target.files[0];
+      this.processImage(file);
+    },
+    async processImage(file) {
+      if (file && file.type.startsWith("image/")) {
+        const image = await this.createImageFromFile(file);
+        
+        this.newWidth = image.width * 2;
+        this.newHeight = image.height * 2;
 
-import Upscaler from 'upscaler';
-const upscaler = new Upscaler();
-upscaler.upscale('@/../resources/images/icon.png').then(upscaledImage => {
-  console.log(upscaledImage); // base64 representation of image src
-});
+        this.$nextTick(() => {
+          const canvas = this.$refs.canvas;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(image, 0, 0, image.width, image.height);
 
+          const srcData = ctx.getImageData(0, 0, image.width, image.height);
+          const dstData = new ImageData(this.newWidth, this.newHeight);
 
+          if (this.selectedAlgorithm === "bilinear") {
+            this.bilinearInterpolation(srcData, dstData, image.width, image.height);
+          } else if (this.selectedAlgorithm === "nearestNeighbor") {
+            this.nearestNeighbor(srcData, dstData, image.width, image.height);
+          }
 
+          ctx.putImageData(dstData, 0, 0);
+        });
+      }
+    },
+    nearestNeighbor(srcData, dstData, srcWidth, srcHeight) {
+      const srcPixels = srcData.data;
+      const dstPixels = dstData.data;
+
+      const ratioX = srcWidth / dstData.width;
+      const ratioY = srcHeight / dstData.height;
+
+      for (let y = 0; y < dstData.height; y++) {
+        for (let x = 0; x < dstData.width; x++) {
+          const srcX = Math.round(x * ratioX);
+          const srcY = Math.round(y * ratioY);
+
+          const srcIndex = (srcY * srcWidth + srcX) * 4;
+          const dstIndex = (y * dstData.width + x) * 4;
+
+          for (let i = 0; i < 4; i++) {
+            dstPixels[dstIndex + i] = srcPixels[srcIndex + i];
+          }
+        }
+      }
+    },
+		bilinearInterpolation(srcData, dstData, srcWidth, srcHeight) {
+			const srcPixels = srcData.data;
+			const dstPixels = dstData.data;
+
+			const ratioX = srcWidth / dstData.width;
+			const ratioY = srcHeight / dstData.height;
+
+			for (let y = 0; y < dstData.height; y++) {
+				for (let x = 0; x < dstData.width; x++) {
+					let posX = x * ratioX;
+					let posY = y * ratioY;
+
+					let x1 = Math.floor(posX);
+					let y1 = Math.floor(posY);
+					let x2 = Math.min(x1 + 1, srcWidth - 1);
+					let y2 = Math.min(y1 + 1, srcHeight - 1);
+
+					let indexDst = (y * dstData.width + x) * 4;
+					for (let c = 0; c < 3; c++) {  // RGB channels
+						let i1 = (y1 * srcWidth + x1) * 4 + c;
+						let i2 = (y1 * srcWidth + x2) * 4 + c;
+						let i3 = (y2 * srcWidth + x1) * 4 + c;
+						let i4 = (y2 * srcWidth + x2) * 4 + c;
+
+						let value = srcPixels[i1] * (x2 - posX) * (y2 - posY) +
+												srcPixels[i2] * (posX - x1) * (y2 - posY) +
+												srcPixels[i3] * (x2 - posX) * (posY - y1) +
+												srcPixels[i4] * (posX - x1) * (posY - y1);
+						
+						dstPixels[indexDst + c] = value;
+					}
+					dstPixels[indexDst + 3] = 255;  // alpha channel
+				}
+			}
+		},
+    async createImageFromFile(file) {
+      return new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = reject;
+        image.src = URL.createObjectURL(file);
+      });
+    },
+  },
+};
 </script>
 
-
-
-<!-- Add "scoped" attribute to limit CSS to this component only -->
-<style scoped>
-h3 {
-  margin: 40px 0 0;
-}
-ul {
-  list-style-type: none;
-  padding: 0;
-}
-li {
-  display: inline-block;
-  margin: 0 10px;
-}
-a {
-  color: #42b983;
-}
-
-body {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  margin: 1vh 5vw;
-
-  background-color: #111215;
-  font-family: "IBM Plex Sans", sans-serif;
-  color: white;
-}
-
-canvas {
-  display: block;
-}
-
-#imageContainer {
-  position: relative;
-  width: 800px;
-  height: 800px;
-  overflow: hidden;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  border-radius: 10px;
-  max-width: 100%;
-  filter: saturate(0);
-  transition: all ease 0.5s;
-}
-
-#imageContainer:hover {
-  filter: saturate(100%);
-}
-
-#imageContainer > * {
-  position: absolute;
-  inset: 0;
-  width: 100% !important;
-  height: 100% !important;
-  object-fit: cover;
-}
-
-
-/* buttons on hover */
-.jux-linx {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: flex-start;
-  gap: 10px;
-  position: absolute;
-  left: 20px;
-  bottom: 20px;
-}
-a {
-  text-decoration: none;
-  color: inherit;
-  font-weight: 400;
-  font-size: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  padding: 5px 10px;
-  border-radius: 2px;
-
-  transition: 0.1s all ease-in;
-}
-
-a:nth-child(1):hover {
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  box-shadow: 0px 2px 0 #16a35f;
-}
-
-a:nth-child(2):hover {
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  box-shadow: 0px 2px 0 #ff5757;
+<style>
+.drop-area {
+  border: 2px dashed #ccc;
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
 }
 </style>

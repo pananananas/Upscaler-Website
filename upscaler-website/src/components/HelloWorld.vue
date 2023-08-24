@@ -1,43 +1,26 @@
 <template>
-  <div class="hello">
-    <h1>{{ msg }}</h1>
-    <p>
-      For a guide and recipes on how to configure / customize this project,<br>
-      check out the
-      <a href="https://cli.vuejs.org" target="_blank" rel="noopener">vue-cli documentation</a>.
-    </p>
-    <h3>Installed CLI Plugins</h3>
-    <ul>
-      <li><a href="https://github.com/vuejs/vue-cli/tree/dev/packages/%40vue/cli-plugin-babel" target="_blank" rel="noopener">babel</a></li>
-      <li><a href="https://github.com/vuejs/vue-cli/tree/dev/packages/%40vue/cli-plugin-eslint" target="_blank" rel="noopener">eslint</a></li>
-    </ul>
-    <h3>Essential Links</h3>
-    <ul>
-      <li><a href="https://vuejs.org" target="_blank" rel="noopener">Core Docs</a></li>
-      <li><a href="https://forum.vuejs.org" target="_blank" rel="noopener">Forum</a></li>
-      <li><a href="https://chat.vuejs.org" target="_blank" rel="noopener">Community Chat</a></li>
-      <li><a href="https://twitter.com/vuejs" target="_blank" rel="noopener">Twitter</a></li>
-      <li><a href="https://news.vuejs.org" target="_blank" rel="noopener">News</a></li>
-    </ul>
-    <h3>Ecosystem</h3>
-    <ul>
-      <li><a href="https://router.vuejs.org" target="_blank" rel="noopener">vue-router</a></li>
-      <li><a href="https://vuex.vuejs.org" target="_blank" rel="noopener">vuex</a></li>
-      <li><a href="https://github.com/vuejs/vue-devtools#vue-devtools" target="_blank" rel="noopener">vue-devtools</a></li>
-      <li><a href="https://vue-loader.vuejs.org" target="_blank" rel="noopener">vue-loader</a></li>
-      <li><a href="https://github.com/vuejs/awesome-vue" target="_blank" rel="noopener">awesome-vue</a></li>
-    </ul>
-  </div>
+
+
+    <div id="imageContainer" ref="imageContainerRef">
+  <img id="myImage" src="https://assets.codepen.io/9051928/palm-tree.jpg" ref="myImage">
+		</div>
+  <!-- </div> -->
 </template>
 
-<script>
-export default {
-  name: 'HelloWorld',
-  props: {
-    msg: String
-  }
-}
+
+<script >
+
+import Upscaler from 'upscaler';
+const upscaler = new Upscaler();
+upscaler.upscale('@/../resources/images/icon.png').then(upscaledImage => {
+  console.log(upscaledImage); // base64 representation of image src
+});
+
+
+
 </script>
+
+
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
@@ -54,5 +37,82 @@ li {
 }
 a {
   color: #42b983;
+}
+
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 1vh 5vw;
+
+  background-color: #111215;
+  font-family: "IBM Plex Sans", sans-serif;
+  color: white;
+}
+
+canvas {
+  display: block;
+}
+
+#imageContainer {
+  position: relative;
+  width: 800px;
+  height: 800px;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 10px;
+  max-width: 100%;
+  filter: saturate(0);
+  transition: all ease 0.5s;
+}
+
+#imageContainer:hover {
+  filter: saturate(100%);
+}
+
+#imageContainer > * {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+}
+
+
+/* buttons on hover */
+.jux-linx {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 10px;
+  position: absolute;
+  left: 20px;
+  bottom: 20px;
+}
+a {
+  text-decoration: none;
+  color: inherit;
+  font-weight: 400;
+  font-size: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 5px 10px;
+  border-radius: 2px;
+
+  transition: 0.1s all ease-in;
+}
+
+a:nth-child(1):hover {
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0px 2px 0 #16a35f;
+}
+
+a:nth-child(2):hover {
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0px 2px 0 #ff5757;
 }
 </style>

@@ -4,6 +4,7 @@
       <option value="nearestNeighbor">Nearest Neighbor</option>
       <option value="bilinear">Bilinear Interpolation</option>
 			<option value="bicubic">Bicubic Interpolation</option>
+			<option value="upscaler">Upscaler.js</option>
     </select>
     <div ref="dropArea" 
          @click="selectFile" 
@@ -23,6 +24,9 @@
 
 
 <script>
+import Upscaler from 'upscaler'
+import x2 from '@upscalerjs/esrgan-thick/2x'
+
 export default {
   data() {
     return {
@@ -30,6 +34,7 @@ export default {
       newWidth: null, 
       newHeight: null,
 			originalFilename: null,
+			upscaler: new Upscaler({ model: x2}),
     };
   },
   methods: {
@@ -57,10 +62,12 @@ export default {
       const file = event.dataTransfer.files[0];
       this.originalFilename = file.name;
       this.processImage(file);
-	},	
+		},	
+
     selectFile() {
       this.$refs.fileInput.click();
     },
+
     async processImage(file) {
       if (file && file.type.startsWith("image/")) {
         const image = await this.createImageFromFile(file);
@@ -82,12 +89,19 @@ export default {
             this.nearestNeighbor(srcData, dstData, image.width, image.height);
           } else if (this.selectedAlgorithm === "bicubic") {
 						this.bicubicInterpolation(srcData, dstData, image.width, image.height);
+					} else if (this.selectedAlgorithm === "upscaler") {
+						this.upscaler.upscale(file).then((upscaledImgSrc) => {
+							const img = document.createElement("img");
+							img.src = upscaledImgSrc;
+							document.getElementById("target").appendChild(img);
+						});
 					}
 
           ctx.putImageData(dstData, 0, 0);
         });
       }
     },
+
     nearestNeighbor(srcData, dstData, srcWidth, srcHeight) {
       const srcPixels = srcData.data;
       const dstPixels = dstData.data;
@@ -109,6 +123,7 @@ export default {
         }
       }
     },
+
 		bilinearInterpolation(srcData, dstData, srcWidth, srcHeight) {
 			const srcPixels = srcData.data;
 			const dstPixels = dstData.data;
@@ -144,8 +159,6 @@ export default {
 				}
 			}
 		},
-
-    // ... pozostałe metody ...
 
     bicubicInterpolation(srcData, dstData, srcWidth, srcHeight) {
         // const srcPixels = srcData.data;
@@ -234,9 +247,29 @@ export default {
         }
     },
 
+		async upscaleWithUpscaler(image, ctx) {
+			const pathToImage = URL.createObjectURL(image);
+			try {
+				const upscaledImageSrc = await this.upscaler.upscale(pathToImage);
+				const upscaledImage = await this.createImageFromSrc(upscaledImageSrc);
+				
+				this.newWidth = upscaledImage.width;
+				this.newHeight = upscaledImage.height;
+				
+				ctx.drawImage(upscaledImage, 0, 0, upscaledImage.width, upscaledImage.height);
+			} catch (error) {
+				console.error("Error during upscaling with Upscaler.js:", error);
+			}
+		},
 
-
-
+		async createImageFromSrc(src) {
+			return new Promise((resolve, reject) => {
+				const image = new Image();
+				image.onload = () => resolve(image);
+				image.onerror = reject;
+				image.src = src;
+			});
+		},
 
     async createImageFromFile(file) {
       return new Promise((resolve, reject) => {
